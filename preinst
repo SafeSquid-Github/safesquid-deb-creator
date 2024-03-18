@@ -1,0 +1,69 @@
+#!/bin/bash
+
+set -o pipefail
+
+_USER_="ssquid"
+_GROUP_="root"
+
+declare -A OLD
+OLD[0]="/opt/safesquid/bin/modules/svscan.so"
+OLD[1]="/opt/safesquid/bin/modules/svscan.xml"
+OLD[2]="/opt/safesquid/bin/modules/sscore.so"
+OLD[3]="/opt/safesquid/bin/modules/sscore.xml"
+
+
+MONIT_SUSPEND ()
+{
+	_MONIT=$(which monit) ; 
+	_e=$?;
+	[ "x${_e}" != "x0" ] && _MONIT="" && return;
+	${_MONIT} status > /dev/null
+	_MONIT_STATUS=$?;
+	[ "x${_MONIT_STATUS}" != "x0" ] && return;
+	${_MONIT} unmonitor all
+}
+
+STOP_SAFESQUID ()
+{
+	[ -f "/etc/init.d/safesquid" ] && /etc/init.d/safesquid stop;
+}
+
+MAKE_USER_ ()
+{
+
+		ID=""; 
+		unset GID;
+		typeset -a GID;
+		unset G; typeset -i G; G=1
+		
+		useradd -r ${_USER_} -g ${_GROUP_} --shell "${SHELL}"
+		usermod ${_USER_} -g ${_GROUP_}
+		for grps in ${GID[*]}
+		do
+			[ "x${grps}" != "x${_GROUP_}" ] && continue;			
+			echo "_USER_ ${_USER_} is a member of _GROUP_ ${_GROUP_}" && G=0 && break;			
+		done		
+		
+		return;
+}
+
+REMOVE_OLD()
+{
+	local i=0
+	for (( i=0; i<${#OLD[*]}; i++))
+	do
+		[ "x${OLD[$i]}" == "x" ] && continue;
+		[ ! -e  "${OLD[$i]}" ] && continue;
+		rm -f "${OLD[$i]}"	
+	done
+}
+
+MAIN()
+{
+	MONIT_SUSPEND
+	STOP_SAFESQUID
+	MAKE_USER_
+	REMOVE_OLD
+}
+
+MAIN			

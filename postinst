@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -o pipefail
+
+MONIT_RESUME ()
+{
+	_MONIT=$(which monit) ; 
+	_e=$?;
+	[ "x${_e}" != "x0" ] && _MONIT="" && return;
+	${_MONIT} status > /dev/null
+	_MONIT_STATUS=$?;
+	[ "x${_MONIT_STATUS}" != "x0" ] && systemctl restart monit.service;
+	[ "x${_MONIT_STATUS}" != "x0" ] && return;
+	${_MONIT} monitor all 
+	${_MONIT} reload
+}
+
+MAKE_CHANGES()
+{
+	HOSTNM="HOSTNAME\=\"$(hostname -f)\""
+	DOMAIN="DOMAIN\=\"$(hostname -d)\""
+	sed -i "s/HOSTNAME\=\"\"/${HOSTNM}/g"  /opt/safesquid/default/startup.ini
+	sed -i "s/DOMAIN\=\"\"/${DOMAIN}/g" /opt/safesquid/default/startup.ini
+	[ -f /opt/safesquid/startup.ini ] && sed -i 's/;/#/g' /opt/safesquid/startup.ini
+	chmod 644 /etc/shadow
+}
+
+MAIN()
+{
+	MAKE_CHANGES
+	MONIT_RESUME 
+}
+
+MAIN
